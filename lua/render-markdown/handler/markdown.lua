@@ -86,7 +86,7 @@ M.render_node = function(namespace, buf, capture, node)
             virt_text = {
                 { border, 'code_block_border' },
             },
-            sign_text = icon,
+            -- sign_text = icon,
             sign_hl_group = hl,
             priority = 8,
             end_row = end_row - 1,
