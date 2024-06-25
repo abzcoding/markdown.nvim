@@ -1,4 +1,5 @@
 local callout = require('render-markdown.callout')
+local devicons = require('nvim-web-devicons')
 local list = require('render-markdown.list')
 local logger = require('render-markdown.logger')
 local state = require('render-markdown.state')
@@ -55,12 +56,59 @@ M.render_node = function(namespace, buf, capture, node)
             virt_text_pos = 'overlay',
         })
     elseif capture == 'code' then
-        vim.api.nvim_buf_set_extmark(buf, namespace, start_row, 0, {
-            end_row = end_row,
-            end_col = 0,
-            hl_group = highlights.code,
-            hl_eol = true,
+        local language = vim.treesitter.get_node_text(node:named_child(1), buf)
+        local icon, hl = devicons.get_icon(nil, language, { default = true })
+        local used_width = 1
+        local border = ''
+
+        vim.api.nvim_buf_set_extmark(buf, namespace, start_row, start_col, {
+            virt_text_pos = 'overlay',
+            virt_text = {
+                { icon .. ' ' or 'Hi', hl or '' },
+            },
+            priority = 8,
+            line_hl_group = highlights.code,
         })
+        used_width = used_width + vim.fn.strchars(icon)
+
+        vim.api.nvim_buf_set_extmark(buf, namespace, start_row, start_col + used_width, {
+            virt_text_pos = 'overlay',
+            virt_text = {
+                { language ~= nil and ' ' .. language .. ' ' or '', 'Bold' },
+            },
+            priority = 8,
+            line_hl_group = highlights.code,
+        })
+        used_width = used_width + vim.fn.strchars(language) + 1
+
+        vim.api.nvim_buf_set_extmark(buf, namespace, start_row, start_col + used_width, {
+            virt_text_pos = 'overlay',
+            virt_text = {
+                { border, 'code_block_border' },
+            },
+            sign_text = icon,
+            sign_hl_group = hl,
+            priority = 8,
+            end_row = end_row - 1,
+            line_hl_group = highlights.code,
+        })
+
+        vim.api.nvim_buf_set_extmark(buf, namespace, end_row - 1, start_col, {
+            virt_text_pos = 'overlay',
+            virt_text = {
+                { string.rep(' ', 3 + vim.fn.strchars(language)), highlights.code },
+            },
+        })
+
+        for l = 1, (end_row - start_row - 2) do
+            vim.api.nvim_buf_set_extmark(buf, namespace, start_row + l, start_col, {
+                virt_text_pos = 'inline',
+                virt_text = {
+                    { ' ', highlights.code },
+                },
+                priority = 8,
+            })
+        end
     elseif capture == 'list_marker' then
         if ts.sibling(node, { 'task_list_marker_unchecked', 'task_list_marker_checked' }) ~= nil then
             -- Hide the list marker for checkboxes rather than replacing with a bullet point
