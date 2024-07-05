@@ -203,13 +203,13 @@ M.render_node = function(namespace, buf, capture, node)
                 return string.rep('─', vim.fn.strdisplaywidth(part))
             end, headings)
 
-            local line_above = { { '┌' .. table.concat(lengths, '┬') .. '┐', highlights.table.head } }
+            local line_above = { { '╭' .. table.concat(lengths, '┬') .. '╮', highlights.table.head } }
             vim.api.nvim_buf_set_extmark(buf, namespace, start_row, start_col, {
                 virt_lines_above = true,
                 virt_lines = { line_above },
             })
 
-            local line_below = { { '└' .. table.concat(lengths, '┴') .. '┘', highlights.table.row } }
+            local line_below = { { '╰' .. table.concat(lengths, '┴') .. '╯', highlights.table.row } }
             vim.api.nvim_buf_set_extmark(buf, namespace, end_row, start_col, {
                 virt_lines_above = true,
                 virt_lines = { line_below },

@@ -41,6 +41,34 @@ M.render_node = function(namespace, buf, capture, node)
                 virt_text_pos = 'overlay',
             })
         end
+    elseif capture == 'link' then
+        local hyperlink_icon = state.config.hyperlink
+        local link_text = string.match(value, '%[(.-)%]')
+        vim.api.nvim_buf_set_extmark(buf, namespace, start_row, start_col, {
+            virt_text_pos = 'inline',
+            virt_text = {
+                { hyperlink_icon .. link_text, '@markup.link.label' },
+            },
+            conceal = '',
+            end_row = end_row,
+            end_col = end_col,
+        })
+    elseif capture == 'image' then
+        local image_icon = state.config.image
+        local link_text = string.match(value, '%[(.-)%]')
+
+        vim.api.nvim_buf_set_extmark(buf, namespace, start_row, start_col, {
+            virt_text_pos = 'inline',
+
+            virt_text = {
+                { image_icon .. link_text, '@markup.link.label' },
+            },
+
+            conceal = '',
+
+            end_row = end_row,
+            end_col = end_col,
+        })
     else
         -- Should only get here if user provides custom capture, currently unhandled
         logger.error('Unhandled inline capture: ' .. capture)

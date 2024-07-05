@@ -122,6 +122,10 @@ require('render-markdown').setup({
     inline_query = [[
         (code_span) @code
 
+        ((inline_link) @link)
+
+        ((image) @image)
+
         (shortcut_link) @callout
     ]],
     -- Executable used to convert latex formula to rendered unicode
@@ -136,6 +140,10 @@ require('render-markdown').setup({
     render_modes = { 'n', 'c' },
     -- Characters that will replace the # at the start of headings
     headings = { '󰲡 ', '󰲣 ', '󰲥 ', '󰲧 ', '󰲩 ', '󰲫 ' },
+    -- Character to use for hyperlink
+    hyperlink = ' ',
+    -- Character to use for image
+    image = ' ',
     -- Character to use for the horizontal break
     dash = '─',
     -- Character to use for the bullet points in lists
@@ -210,7 +218,7 @@ require('render-markdown').setup({
             -- Unchecked checkboxes
             unchecked = '@markup.list.unchecked',
             -- Checked checkboxes
-            checked = '@markup.heading',
+            checked = '@markup.list.checked',
         },
         table = {
             -- Header of a markdown table
