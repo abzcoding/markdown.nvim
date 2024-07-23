@@ -24,6 +24,17 @@ end
 ---@param capture string
 ---@param node TSNode
 M.render_node = function(namespace, buf, capture, node)
+    local get_str_width = function(str)
+        local width = 0
+        local overlflow = 0
+
+        for match in str:gmatch('[%z\1-\127\194-\244][\128-\191]*') do
+            overlflow = overlflow + (vim.fn.strdisplaywidth(match) - 1)
+            width = width + #match
+        end
+
+        return width, overlflow
+    end
     local highlights = state.config.highlights
     local value = vim.treesitter.get_node_text(node, buf)
     local start_row, start_col, end_row, end_col = node:range()
@@ -58,55 +69,68 @@ M.render_node = function(namespace, buf, capture, node)
     elseif capture == 'code' then
         local language = vim.treesitter.get_node_text(node:named_child(1), buf)
         local icon, hl = devicons.get_icon(nil, language, { default = true })
-        local used_width = 1
-        local border = ''
+        local line_lens = {}
+        local lines = {}
+        local highest_len = 80
 
+        for i = 1, (end_row - start_row) - 2 do
+            local this_code = vim.api.nvim_buf_get_lines(buf, start_row + i, start_row + i + 1, false)[1]
+            local len = vim.fn.strchars(this_code) or 0
+
+            if len > highest_len then
+                highest_len = len
+            end
+
+            table.insert(lines, this_code)
+            table.insert(line_lens, len)
+        end
+
+        local lang_width = vim.fn.strchars(icon .. ' ' .. language .. ' ')
         vim.api.nvim_buf_set_extmark(buf, namespace, start_row, start_col, {
             virt_text_pos = 'overlay',
             virt_text = {
-                { icon .. ' ' or 'Hi', hl or '' },
+                { string.rep(' ', highest_len - lang_width + 2), highlights.code },
+                { icon .. ' ', hl },
+                { language .. ' ', hl },
             },
-            priority = 8,
-            line_hl_group = highlights.code,
-        })
-        used_width = used_width + vim.fn.strchars(icon)
-
-        vim.api.nvim_buf_set_extmark(buf, namespace, start_row, start_col + used_width, {
-            virt_text_pos = 'overlay',
-            virt_text = {
-                { language ~= nil and ' ' .. language .. ' ' or '', 'Bold' },
-            },
-            priority = 8,
-            line_hl_group = highlights.code,
-        })
-        used_width = used_width + vim.fn.strchars(language) + 1
-
-        vim.api.nvim_buf_set_extmark(buf, namespace, start_row, start_col + used_width, {
-            virt_text_pos = 'overlay',
-            virt_text = {
-                { border, 'code_block_border' },
-            },
-            -- sign_text = icon,
+            sign_text = icon,
             sign_hl_group = hl,
-            priority = 8,
-            end_row = end_row - 1,
-            line_hl_group = highlights.code,
+            hl_mode = 'combine',
         })
 
         vim.api.nvim_buf_set_extmark(buf, namespace, end_row - 1, start_col, {
             virt_text_pos = 'overlay',
             virt_text = {
-                { string.rep(' ', 3 + vim.fn.strchars(language)), highlights.code },
+                { string.rep(' ', highest_len + 1), highlights.code },
             },
+
+            hl_mode = 'combine',
         })
 
-        for l = 1, (end_row - start_row - 2) do
-            vim.api.nvim_buf_set_extmark(buf, namespace, start_row + l, start_col, {
+        for line, text in ipairs(lines) do
+            local length = line_lens[line] - start_col
+            vim.api.nvim_buf_add_highlight(buf, namespace, highlights.code, start_row + line, start_col, -1)
+
+            vim.api.nvim_buf_set_extmark(
+                buf,
+                namespace,
+                start_row + line,
+                length < 0 and start_col + length or start_col,
+                {
+                    virt_text_pos = 'inline',
+                    virt_text = {
+                        { string.rep(' ', 1), highlights.code },
+                    },
+                }
+            )
+            local position, reduce_cols = get_str_width(text)
+
+            vim.api.nvim_buf_set_extmark(buf, namespace, start_row + line, position, {
                 virt_text_pos = 'inline',
                 virt_text = {
-                    { ' ', highlights.code },
+                    { string.rep(' ', highest_len - length - reduce_cols), highlights.code },
+                    { string.rep(' ', 1), hl },
                 },
-                priority = 8,
             })
         end
     elseif capture == 'list_marker' then
